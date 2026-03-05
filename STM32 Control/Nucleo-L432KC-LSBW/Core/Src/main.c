@@ -173,7 +173,13 @@ void compute_current(){
 
 // send can and uart command
 void send_command(){
-	float steer_transmit = steer_measured;
+    // send current command to vesc via uart
+	vesc_set_current(vesc_packet, (float)current);
+	HAL_UART_Transmit(VESC_UART, vesc_packet, sizeof(vesc_packet), 2);
+}
+
+void send_info(){
+  float steer_transmit = steer_measured;
 
 	if (steer_transmit > steer_max){
 		steer_transmit = steer_max;
@@ -181,21 +187,15 @@ void send_command(){
 		steer_transmit = -steer_max;
 	}
 
-    // send current command to vesc via uart
-	vesc_set_current(vesc_packet, (float)current);
-	HAL_UART_Transmit(VESC_UART, vesc_packet, sizeof(vesc_packet), 2);
-}
-
-void send_info(){
 	// send measured steering angle on canbus
-	CAN_TxData[0] = (int)(steer_measured + steer_max);
+	CAN_TxData[0] = (int)(steer_transmit + steer_max);
     HAL_CAN_AddTxMessage(&hcan1, &TxHeader, CAN_TxData, &TxMailbox);
 
     printf(
   	  "steering angle desired: %.2f \r\n", steer_desired
     );
     printf(
-  	  "steering angle measured: %.2f \r\n", steer_measured
+  	  "steering angle measured: %.2f \r\n", steer_transmit
     );
     printf(
   	  "steering angle error: %.2f \r\n", error

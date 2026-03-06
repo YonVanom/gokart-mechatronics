@@ -33,6 +33,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define CAN_TIMEOUT_MS 500
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -51,7 +52,7 @@ TIM_HandleTypeDef htim16;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
-
+uint32_t last_cmd_tick = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -120,12 +121,16 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan1)
 	  // first compute the brake percentage then the pressure needed
 	  throttle_desired = CAN_RxData[2];
 	  motor_direction = CAN_RxData[3];
+	  last_cmd_tick = HAL_GetTick();
   }
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 	// 100Hz = 10ms send out speed control ppm to vesc
 	if (htim == &htim6){
+	  if (HAL_GetTick() - last_cmd_tick > CAN_TIMEOUT_MS) {
+		  throttle_desired = 0;
+	  }
 	  if (motor_direction == 1){
 		  TIM1->CCR1 = throttle_desired/2 + 150;
 	  } else{

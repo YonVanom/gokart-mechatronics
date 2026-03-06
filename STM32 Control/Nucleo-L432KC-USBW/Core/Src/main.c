@@ -33,6 +33,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define CAN_TIMEOUT_MS 500
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -51,7 +52,7 @@ TIM_HandleTypeDef htim16;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
-
+uint32_t last_cmd_tick = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -145,6 +146,7 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan1)
     printf("Receive from MAIN CONTROLLER\r\n");
     
 	  steer_desired = (float)CAN_RxData[0] - steer_max;
+	  last_cmd_tick = HAL_GetTick();
   }
 }
 
@@ -173,6 +175,9 @@ float clamp(float value, float min, float max) {
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 	// 40Hz = 25ms motor control loop
 	if (htim == &htim6) {
+		if (HAL_GetTick() - last_cmd_tick > CAN_TIMEOUT_MS) {
+			steer_desired = 0.0;
+		}
 		//Left = -ve steer_measured
 		//Right = +ve steer_measured
 		steer_measured = 360.0 / (32 * gear_ratio) * encoder_count;

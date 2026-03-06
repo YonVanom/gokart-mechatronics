@@ -37,6 +37,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define CAN_TIMEOUT_MS 500
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -57,7 +58,7 @@ UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
-
+uint32_t last_cmd_tick = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -221,12 +222,16 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan1)
 	  // recover raw steer data [-50 - 50]
 	  steer_desired = CAN_RxData[0] - steer_max;
 	  steer_desired = wrap_to_pi(steer_desired);
+	  last_cmd_tick = HAL_GetTick();
   }
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 	// 25Hz - 40ms steering motor NEO1650 control loop
 	if (htim == &htim6) {
+		if (HAL_GetTick() - last_cmd_tick > CAN_TIMEOUT_MS) {
+			steer_desired = 0.0;
+		}
 		compute_current();
 		send_command();
 	}

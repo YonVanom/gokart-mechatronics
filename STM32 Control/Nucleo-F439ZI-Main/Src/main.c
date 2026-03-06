@@ -42,6 +42,8 @@
 void compute_auto_brake();
 void autonomous_speed_throttle_pid();
 
+#define NODE_TIMEOUT_MS 1000
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -110,6 +112,12 @@ float d_term = 0.0;
 volatile int ctrl_connected = 0;
 
 // char UART_TxData[6];
+
+uint32_t last_tbw_tick = 0;   // 0x101 TBW
+uint32_t last_bbw_tick = 0;   // 0x102 BBW
+uint32_t last_lsbw_tick = 0;  // 0x103 LSBW
+uint32_t last_usbw_tick = 0;  // 0x104 USBW
+uint32_t last_auto_tick = 0;  // autonomous UART6 commands
 
 /* USER CODE END PV */
 
@@ -397,21 +405,25 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan1)
   if (RxHeader.StdId == 0x101)
   {
     speed_measured = CAN_RxData[0] / 10.0;
+    last_tbw_tick = HAL_GetTick();
   }
 
   if (RxHeader.StdId == 0x102)
   {
     brake_measured = CAN_RxData[0];
+    last_bbw_tick = HAL_GetTick();
   }
 
   if (RxHeader.StdId == 0x103)
   {
     steer_measured = CAN_RxData[0] - steer_max;
+    last_lsbw_tick = HAL_GetTick();
   }
 
   if (RxHeader.StdId == 0x104)
   {
     steering_wheel = CAN_RxData[0] - steer_max;
+    last_usbw_tick = HAL_GetTick();
   }
 }
 
@@ -451,6 +463,35 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
     if (ctrl_connected < CTRL_SATURATION_THRESHOLD)
     {
+      printf("ESTOP: RC controller disconnected\r\n");
+      emergency_stop();
+    }
+
+    uint32_t now = HAL_GetTick();
+    if (now - last_tbw_tick > NODE_TIMEOUT_MS)
+    {
+      printf("ESTOP: TBW node timeout\r\n");
+      emergency_stop();
+    }
+    if (now - last_bbw_tick > NODE_TIMEOUT_MS)
+    {
+      printf("ESTOP: BBW node timeout\r\n");
+      emergency_stop();
+    }
+    if (now - last_lsbw_tick > NODE_TIMEOUT_MS)
+    {
+      printf("ESTOP: LSBW node timeout\r\n");
+      emergency_stop();
+    }
+    if (now - last_usbw_tick > NODE_TIMEOUT_MS)
+    {
+      printf("ESTOP: USBW node timeout\r\n");
+      emergency_stop();
+    }
+
+    if (gokart_mode == 1 && now - last_auto_tick > NODE_TIMEOUT_MS)
+    {
+      printf("ESTOP: autonomous command timeout\r\n");
       emergency_stop();
     }
 

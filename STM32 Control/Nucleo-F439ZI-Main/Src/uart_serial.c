@@ -1,5 +1,7 @@
 #include <uart_serial.h>
 
+extern uint32_t last_auto_tick;
+
 uint8_t drive_msg[25];
 uint8_t current_pos = 0;
 
@@ -38,6 +40,7 @@ void uart_serial_irq_handler(UART_HandleTypeDef *huart) {
 
 		if (current_pos == 25){
 			current_pos = 0;
+			last_auto_tick = HAL_GetTick();
 		}
 
 		return;

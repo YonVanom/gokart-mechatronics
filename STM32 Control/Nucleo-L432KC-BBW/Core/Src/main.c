@@ -33,6 +33,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define CAN_TIMEOUT_MS 500
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -53,7 +54,7 @@ TIM_HandleTypeDef htim16;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
-
+uint32_t last_cmd_tick = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -110,12 +111,16 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan1)
     printf("Receive from MAIN CONTROLLER\r\n");
 	  // first compute the brake percentage then the pressure needed
 	  pressure_desired = CAN_RxData[1];
+	  last_cmd_tick = HAL_GetTick();
   }
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 	// 100Hz = 10ms breaking linear actuator control loop
 	if (htim == &htim6){
+	  if (HAL_GetTick() - last_cmd_tick > CAN_TIMEOUT_MS) {
+		  pressure_desired = 500.0;
+	  }
 	  int brake_duty_cycle;
 	  int max_duty_cycle = 400;
 

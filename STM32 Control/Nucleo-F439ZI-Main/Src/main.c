@@ -521,11 +521,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   if (htim == &htim11)
   {
     //		 print_info();
-    if (gokart_mode == 1)
+    if (gokart_mode == 1 && HAL_GetTick() - last_auto_tick <= NODE_TIMEOUT_MS)
     {
       handle_autonomous_command();
-      cast_command();
-      send_command();
     }
   }
 }

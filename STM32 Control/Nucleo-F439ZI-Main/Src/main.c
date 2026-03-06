@@ -179,13 +179,14 @@ void mergearray(char a[], char b[], char c[], char d[], int arr1size, int arr2si
   }
 }
 
-void send_gokart_info(float steer, float speed, int is_info)
+void send_gokart_info(float steer, float speed, int is_info, int mode)
 {
   char data[6];
   char info_steer[13];
   char info_speed[13];
   char info_type[9];
-  char info_out[35];
+  char info_mode[7];
+  char info_out[42];
 
   sprintf(data, "%.2f", steer / 180.0 * 3.14);
   mergearray("steer ", data, " ", info_steer, 6, 6, 1);
@@ -202,9 +203,13 @@ void send_gokart_info(float steer, float speed, int is_info)
     mergearray("type ", "info", "", info_type, 5, 4, 0);
   }
 
-  mergearray(info_steer, info_speed, info_type, info_out, 13, 13, 9);
+  sprintf(data, "%d", mode);
+  mergearray(" mode ", data, "", info_mode, 6, 1, 0);
 
-  HAL_UART_Transmit(&huart6, info_out, sizeof(info_out), 10); // Sending in normal mode
+  mergearray(info_steer, info_speed, info_type, info_out, 13, 13, 9);
+  memcpy(info_out + 35, info_mode, 7);
+
+  HAL_UART_Transmit(&huart6, (uint8_t*)info_out, sizeof(info_out), 10); // Sending in normal mode
 }
 
 void handle_remote_command()
@@ -503,13 +508,13 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   if (htim == &htim7)
   {
     // the current gokart drive state information
-    send_gokart_info(steer_measured, speed_measured, 1);
+    send_gokart_info(steer_measured, speed_measured, 1, gokart_mode);
   }
 
   // 10Hz - 100ms send out gokart drive command to higher level device
   if (htim == &htim10)
   {
-    send_gokart_info(steer_desired, speed_desired, 0);
+    send_gokart_info(steer_desired, speed_desired, 0, gokart_mode);
   }
 
   // 5Hz - 200ms print gokart info

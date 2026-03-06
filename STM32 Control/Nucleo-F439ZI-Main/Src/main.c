@@ -255,7 +255,11 @@ void handle_autonomous_command()
   {
     brake_desired = 0.0;
     uint8_t place_holder[10];
-    sscanf(drive_msg, "%s %f %s %f", place_holder, &steer_desired, place_holder, &speed_desired);
+    int parsed = sscanf((char*)drive_msg, "%9s %f %9s %f", place_holder, &steer_desired, place_holder, &speed_desired);
+    if (parsed != 4) {
+      printf("WARN: autonomous command parse failed (%d/4 fields)\r\n", parsed);
+      return;
+    }
     autonomous_speed_throttle_pid();
     //	compute_auto_brake();
   }

@@ -2,7 +2,7 @@
 
 extern uint32_t last_auto_tick;
 
-uint8_t drive_msg[25];
+uint8_t drive_msg[26];  // 25 data bytes + 1 null terminator
 uint8_t current_pos = 0;
 
 void uart_serial_start(UART_HandleTypeDef *huart) {
@@ -39,6 +39,7 @@ void uart_serial_irq_handler(UART_HandleTypeDef *huart) {
 		current_pos ++;
 
 		if (current_pos == 25){
+			drive_msg[25] = '\0';
 			current_pos = 0;
 			last_auto_tick = HAL_GetTick();
 		}

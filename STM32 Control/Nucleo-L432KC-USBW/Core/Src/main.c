@@ -78,6 +78,7 @@ uint32_t TxMailbox;
 
 uint8_t CAN_TxData[8];
 uint8_t CAN_RxData[8];
+uint8_t last_cmd_counter = 0;
 
 float steer_desired = 0.0;
 float steer_measured = 0.0;
@@ -145,8 +146,11 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan1)
     // for CAN communication debugging
     printf("Receive from MAIN CONTROLLER\r\n");
     
+	  if (CAN_RxData[4] != last_cmd_counter) {
+	    last_cmd_counter = CAN_RxData[4];
+	    last_cmd_tick = HAL_GetTick();
+	  }
 	  steer_desired = (float)CAN_RxData[0] - steer_max;
-	  last_cmd_tick = HAL_GetTick();
   }
 }
 

@@ -77,7 +77,8 @@ CAN_RxHeaderTypeDef RxHeader;
 uint32_t TxMailbox;
 
 uint8_t CAN_TxData[4];
-uint8_t CAN_RxData[4];
+uint8_t CAN_RxData[5];
+uint8_t last_cmd_counter = 0;
 
 // important: don't convert to int or it will get reset to 0 for unknown reason
 int motor_direction = 1;
@@ -119,9 +120,12 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan1)
     printf("Receive from MAIN CONTROLLER\r\n");
     
 	  // first compute the brake percentage then the pressure needed
+	  if (CAN_RxData[4] != last_cmd_counter) {
+	    last_cmd_counter = CAN_RxData[4];
+	    last_cmd_tick = HAL_GetTick();
+	  }
 	  throttle_desired = CAN_RxData[2];
 	  motor_direction = CAN_RxData[3];
-	  last_cmd_tick = HAL_GetTick();
   }
 }
 

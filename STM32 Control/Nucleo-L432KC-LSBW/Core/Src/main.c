@@ -84,7 +84,8 @@ CAN_RxHeaderTypeDef RxHeader;
 uint32_t TxMailbox;
 
 uint8_t CAN_TxData[4];
-uint8_t CAN_RxData[4];
+uint8_t CAN_RxData[5];
+uint8_t last_cmd_counter = 0;
 
 uint8_t vesc_packet[10];
 
@@ -220,9 +221,12 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan1)
     printf("Receive from MAIN CONTROLLER\r\n");
     
 	  // recover raw steer data [-50 - 50]
+	  if (CAN_RxData[4] != last_cmd_counter) {
+	    last_cmd_counter = CAN_RxData[4];
+	    last_cmd_tick = HAL_GetTick();
+	  }
 	  steer_desired = CAN_RxData[0] - steer_max;
 	  steer_desired = wrap_to_pi(steer_desired);
-	  last_cmd_tick = HAL_GetTick();
   }
 }
 

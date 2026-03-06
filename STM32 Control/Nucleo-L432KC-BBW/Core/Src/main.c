@@ -80,7 +80,8 @@ CAN_RxHeaderTypeDef RxHeader;
 uint32_t TxMailbox;
 
 uint8_t CAN_TxData[4];
-uint8_t CAN_RxData[4];
+uint8_t CAN_RxData[5];
+uint8_t last_cmd_counter = 0;
 
 // important: don't convert to int or it will get reset to 0 for unknown reason
 double first_met = 1.0;
@@ -110,8 +111,11 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan1)
     // for CAN communication debugging
     printf("Receive from MAIN CONTROLLER\r\n");
 	  // first compute the brake percentage then the pressure needed
+	  if (CAN_RxData[4] != last_cmd_counter) {
+	    last_cmd_counter = CAN_RxData[4];
+	    last_cmd_tick = HAL_GetTick();
+	  }
 	  pressure_desired = CAN_RxData[1];
-	  last_cmd_tick = HAL_GetTick();
   }
 }
 
@@ -119,7 +123,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 	// 100Hz = 10ms breaking linear actuator control loop
 	if (htim == &htim6){
 	  if (HAL_GetTick() - last_cmd_tick > CAN_TIMEOUT_MS) {
-		  pressure_desired = 500.0;
+		  pressure_desired = 150.0;
 	  }
 	  int brake_duty_cycle;
 	  int max_duty_cycle = 400;

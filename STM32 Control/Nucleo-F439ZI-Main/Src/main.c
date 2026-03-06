@@ -119,6 +119,8 @@ uint32_t last_lsbw_tick = 0;  // 0x103 LSBW
 uint32_t last_usbw_tick = 0;  // 0x104 USBW
 uint32_t last_auto_tick = 0;  // autonomous UART6 commands
 
+uint8_t cmd_counter = 0;  // rolling counter, incremented on each fresh command
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -242,6 +244,7 @@ void handle_remote_command()
   steer_desired = steer_percent * steer_max;
 
   printf("steer desired: %f\r\n", steer_desired);
+  cmd_counter++;
 }
 
 void handle_autonomous_command()
@@ -262,6 +265,7 @@ void handle_autonomous_command()
     }
     autonomous_speed_throttle_pid();
     //	compute_auto_brake();
+    cmd_counter++;
   }
 }
 
@@ -366,6 +370,7 @@ void send_command()
   CAN_TxData[1] = (int)(brake_desired);
   CAN_TxData[2] = (int)(throttle_desired);
   CAN_TxData[3] = (int)(motor_direction);
+  CAN_TxData[4] = cmd_counter;
 
   HAL_CAN_AddTxMessage(&hcan1, &TxHeader, CAN_TxData, &TxMailbox);
 }
@@ -440,6 +445,7 @@ void emergency_stop()
 {
   brake_desired = brake_max;
   throttle_desired = 0.0;
+  cmd_counter++;
 }
 
 /**
@@ -699,7 +705,7 @@ static void MX_CAN1_Init(void)
 {
 
   /* USER CODE BEGIN CAN1_Init 0 */
-  TxHeader.DLC = 4;
+  TxHeader.DLC = 5;
   TxHeader.ExtId = 0;
   TxHeader.IDE = CAN_ID_STD;
   TxHeader.RTR = CAN_RTR_DATA;

@@ -160,7 +160,7 @@ void compute_current(){
 
     current = error_bound * kp_e + (error - error_prev) * kd_e + angle_compensation;
     current *= current_multiplier;
-    current = -current;
+    //current = -current;
 
     if (current > current_max){
     	current = current_max;
@@ -218,7 +218,7 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan1)
   if (RxHeader.StdId == 0x100)
   {
     // for CAN communication debugging
-    printf("Receive from MAIN CONTROLLER\r\n");
+    //printf("Receive from MAIN CONTROLLER\r\n");
     
 	  // recover raw steer data [-50 - 50]
 	  if (CAN_RxData[4] != last_cmd_counter) {

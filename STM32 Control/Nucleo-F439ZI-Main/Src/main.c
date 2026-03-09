@@ -498,11 +498,13 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
       printf("ESTOP: LSBW node timeout\r\n");
       emergency_stop();
     }
+    /*
     if (now - last_usbw_tick > NODE_TIMEOUT_MS)
     {
       printf("ESTOP: USBW node timeout\r\n");
       emergency_stop();
     }
+    */
 
     if (gokart_mode == 1 && now - last_auto_tick > NODE_TIMEOUT_MS)
     {

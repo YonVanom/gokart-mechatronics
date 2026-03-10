@@ -71,7 +71,7 @@ UART_HandleTypeDef huart6;
 
 /* USER CODE BEGIN PV */
 int gokart_mode = 0;
-int motor_direction = 0;
+int motor_direction = 1;
 
 float throttle_desired = 0.0;
 
@@ -263,6 +263,12 @@ void handle_autonomous_command()
       printf("WARN: autonomous command parse failed (%d/4 fields)\r\n", parsed);
       return;
     }
+    if (speed_desired >= 0.0){
+    	motor_direction = 1;
+    } else {
+    	motor_direction = 0;
+    	speed_desired = -speed_desired;
+    }
     autonomous_speed_throttle_pid();
     //	compute_auto_brake();
     cmd_counter++;
@@ -289,10 +295,11 @@ float calculateThrottle(int loopCount)
 
 void autonomous_speed_throttle_pid()
 {
+  /*
   float Kp = 75; // Best Kp = 2.0
   float Ki = 0.0;
   float Kd = 0.0;
-  float min_throttle = 90.0;
+  float min_throttle = 0.0; // 90.0
   float pid_cycle_time = 0.200;
 
   pid_speed_error = speed_desired - speed_measured;
@@ -317,6 +324,51 @@ void autonomous_speed_throttle_pid()
   printf("speed_measured: %f \r\n", speed_measured);
   printf("brake measured: %f\r\n", brake_measured);
   printf("\r\n");
+  */
+	float pole_pairs = 5; // motor pole pairs
+	float gear_ratio = 2.4545; // gear ratio between motor and wheels
+	float wheel_diameter = 0.27;
+
+	float erpm_max = 2500.0; // ERPM at max throttle (throttle curve)
+	float erpm_min = 0.0; // ERPM at min throttle (throttle curve)
+	float throttle_max = 100.0; // Max throttle value
+	float throttle_min = 0.0; // Min throttle value
+
+	float Ki = 1.0; // Integral term
+
+	float erpm_desired = pole_pairs * 60.0 * speed_desired / (wheel_diameter * 3.1415);
+	float throttle_curve = throttle_min + (throttle_max - throttle_min) * erpm_desired / (erpm_max - erpm_min);
+
+	// Use I controller to correct offset
+	pid_speed_error = speed_desired - speed_measured;
+
+	i_term = Ki * pid_integral;
+
+	float y = throttle_curve + i_term;
+
+	// Anti-windup, we only want to integrate if we are within bounds OR if we are outside and integrating would move us closer
+	if (!((y >= throttle_max && pid_speed_error >= 0.0) || (y <= throttle_min && pid_speed_error <= 0.0)))
+	{
+		pid_integral += pid_speed_error;
+	}
+
+	// Recompute with updated integral
+	i_term = Ki * pid_integral;
+	y = throttle_curve + i_term;
+
+	// Clamp throttle
+	throttle_desired = min(max(y, throttle_min), throttle_max);
+
+	printf("speed_desired: %f \r\n", speed_desired);
+	printf("erpm_desired: %f \r\n", erpm_desired);
+	printf("throttle_curve: %f \r\n", throttle_curve);
+	printf("i_term: %f \r\n", i_term);
+	printf("pid_integral: %f \r\n", pid_integral);
+	printf("y: %f \r\n", y);
+	printf("throttle_desired: %f \r\n", throttle_desired);
+	printf("speed_measured: %f \r\n", speed_measured);
+	printf("brake_measured: %f\r\n", brake_measured);
+	printf("\r\n");
 }
 
 void compute_auto_brake()
@@ -520,7 +572,11 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   if (htim == &htim7)
   {
     // the current gokart drive state information
-    send_gokart_info(steer_measured, speed_measured, 1, gokart_mode);
+	  if (motor_direction > 0.5) {
+		  send_gokart_info(steer_measured, speed_measured, 1, gokart_mode);
+	  } else {
+		  send_gokart_info(steer_measured, -speed_measured, 1, gokart_mode);
+	  }
   }
 
   // 10Hz - 100ms send out gokart drive command to higher level device
@@ -532,7 +588,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   // 5Hz - 200ms print gokart info
   if (htim == &htim11)
   {
-    //		 print_info();
+    // print_info();
     if (gokart_mode == 1 && HAL_GetTick() - last_auto_tick <= NODE_TIMEOUT_MS)
     {
       handle_autonomous_command();
